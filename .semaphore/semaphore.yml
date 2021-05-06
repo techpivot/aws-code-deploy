@@ -1,0 +1,39 @@
+version: "v1.0"
+name: aws-code-deploy
+
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+fail_fast:
+  stop:
+    when: "true"
+
+auto_cancel:
+  running:
+    when: "branch != 'master'"
+
+blocks:
+  - name: "Build"
+    dependencies: []
+    task:
+      prologue:
+        commands:
+          - sem-version node 10.15.3
+          - checkout
+          - npm install
+      secrets:
+        - name: npm
+      jobs:
+        - name: "Test"
+          commands:
+            - npm test
+
+promotions:
+  - name: production
+    pipeline_file: production.yml
+    auto_promote_on:
+      - result: passed
+        branch:
+          - "^master$"

@@ -1,0 +1,25 @@
+version: "v1.0"
+name: Deployment to Production
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+blocks:
+  - name: "Deploy to Production"
+    task:
+      prologue:
+        commands:
+          - checkout
+      secrets:
+        - name: npm
+      jobs:
+        - name: Deploy
+          commands:
+            - npm publish --access public
+      epilogue:
+        on_pass:
+          commands:
+            # Remind us to verify the change in production
+            # Build as an epilogue so it won't fail the build if it errors
+            - npm install request lodash
+            - REMINDER_DELAY="at 9am tomorrow" node ci_scripts/verification_reminder.js || echo 'Error running nudgebot'
