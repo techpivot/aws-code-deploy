@@ -97,6 +97,12 @@ installAwsCli() {
   runCommand "sudo pip install awscli"
 }
 
+installCoreUtils() {
+    h2 "Installing CoreUtils"
+    runCommand "HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install coreutils"
+    success "Installing CoreUtils succeeded"
+}
+
 vercomp() {
   if [[ $1 == $2 ]]
   then
@@ -170,6 +176,7 @@ fi
 # Check AWS is installed
 h1 "Step 1: Checking Dependencies"
 
+
 if ! typeExists "aws"; then
   installAwsCli
   success "Installing AWS CLI $(aws --version 2>&1) succeeded"
@@ -184,7 +191,14 @@ else
   fi
 
   success "Dependencies met $(aws --version 2>&1)"
+fi  
+if [[ "$OSTYPE" == "darwin"* ]]; then
+   if ! typeExists "greadlink"; then
+      installCoreUtils
+      success "Installing CoreUtils  succeeded" 
+    fi
 fi
+
 
 
 
@@ -330,7 +344,13 @@ fi
 # ----- Application Source -----
 h1 "Step 6: Checking Application Source"
 AWS_CODE_DEPLOY_APP_BUNDLE_TYPE=${AWS_CODE_DEPLOY_APP_BUNDLE_TYPE:-zip}
-APP_SOURCE=$(readlink -f "${AWS_CODE_DEPLOY_APP_SOURCE:-.}")
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    APP_SOURCE=$(readlink -f "${AWS_CODE_DEPLOY_APP_SOURCE:-.}")    
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    APP_SOURCE=$(greadlink -f "${AWS_CODE_DEPLOY_APP_SOURCE:-.}")
+else
+   APP_SOURCE=$(realpath -f "${AWS_CODE_DEPLOY_APP_SOURCE:-.}")
+fi
 
 if [ ! -d "$APP_SOURCE" -a ! -e "$APP_SOURCE" ]; then
   # Note: Use original variable for output as the readlink can potentially evaluate to ""
@@ -457,7 +477,8 @@ else
         success "Successfuly removed $(($S3_TOTAL_FILES-$S3_DEPLOY_LIMIT)) file(s)"
         break
       fi
-      FILE_LINE=$(expr "$line" : '^.*[0-9]\{2\}\:[0-9]\{2\}\:[0-9]\{2\}[ ]\+[0-9]\+[ ]\+\(.*\)$')
+      #FILE_LINE=$(expr "$line" : '^.*[0-9]\{2\}\:[0-9]\{2\}\:[0-9]\{2\}[ ]\+[0-9]\+[ ]\+\(.*\)$')
+      FILE_LINE=`(echo $line | awk '{$1=$2=$3=""; print $0}' | sed 's/^[ \t]*//')`
       runCommand "aws s3 rm \"s3://$S3_FULL_BUCKET/$FILE_LINE\""
       ((S3_NUMBER_FILES_TO_CLEAN--))
     done
