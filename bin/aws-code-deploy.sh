@@ -498,7 +498,13 @@ runCommand "${REGISTER_APP_CMD}" \
 # ----------------------
 DEPLOYMENT_DESCRIPTION="$AWS_CODE_DEPLOY_DEPLOYMENT_DESCRIPTION"
 h1 "Step 10: Creating Deployment"
-DEPLOYMENT_CMD="aws deploy create-deployment --output json --application-name $APPLICATION_NAME --deployment-config-name $DEPLOYMENT_CONFIG_NAME --deployment-group-name $DEPLOYMENT_GROUP --s3-location $S3_LOCATION"
+
+IGNORE_APPLICATION_STOP_FAILURES_SWITCH=""
+if [ "true" == "${AWS_CODE_DEPLOY_IGNORE_APPLICATION_STOP_FAILURES}" ]; then
+  # https://docs.aws.amazon.com/codedeploy/latest/userguide/troubleshooting-deployments.html#troubleshooting-deployments-lifecycle-event-failures
+  IGNORE_APPLICATION_STOP_FAILURES_SWITCH="--ignore-application-stop-failures"
+fi
+DEPLOYMENT_CMD="aws deploy create-deployment $IGNORE_APPLICATION_STOP_FAILURES_SWITCH --output json --application-name $APPLICATION_NAME --deployment-config-name $DEPLOYMENT_CONFIG_NAME --deployment-group-name $DEPLOYMENT_GROUP --s3-location $S3_LOCATION"
 
 if [ -n "$DEPLOYMENT_DESCRIPTION" ]; then
   DEPLOYMENT_CMD="$DEPLOYMENT_CMD --description \"$DEPLOYMENT_DESCRIPTION\""
